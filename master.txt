@@ -1,0 +1,74 @@
+1.- docker-compose up -d jenkins
+    - Solo levantar el servicio de jenkins para primero poder crear los nodos
+    - instalar depedencias en jenkins.
+        Maven Integration
+        GitHub Integration
+        Github Authentication
+        GitHub plugin
+        GitHub API Plugin
+        Docker
+        Docker Pipeline
+        Generic Webhook Trigger
+        SonarQube Scanner
+        Sonargraph Integration
+        Pipeline Utility Steps
+
+    -Reiniciar el servicio de jenkins despues de instalar las dependencias
+
+2.- Configurar el nodo agente jenkins-inbound-agent
+    
+    Navega a http://localhost:8081 y accede a Jenkins.
+
+    Ve a Manage Jenkins > Administrar Jenkins > nodos.
+
+    Crea un nuevo nodo con los siguientes detalles:
+
+    Nombre del Nodo: inbound-agent
+    Tipo: Permanent Agent
+    Número de ejecutores: 1
+    Remote root directory: /home/jenkins/agent
+    Labels: inbound-agent
+    Usage: Utilizar este nodo tanto como sea posible
+    Metodo de ejecución: Launch agent by connecting it to the controller
+    Disponibilidad: Keep this agent online as much as possible
+
+    Al darle guardar se van a mostrar los metodos de uso del agente, de allí hay que copiar el 'secret' y ponerlo en la variable de entorno AGENT_INBOUND_SECRET (tambien la url del jenkins AGENT_INBOUND_URL=http://jenkins:8080 en .env).
+
+    lanzar el servicio con  docker-compose up -d jenkins-inbound-agent --build
+    se levantará el agente listo para su uso. Probar con un pipeline script sencillo
+
+    pipeline {
+    agent {
+        label 'inbound-agent' 
+    }
+    stages {
+        stage('Hola Mundo') {
+            steps {
+                echo 'Hola mundo desde agente inbound-agent'
+                // en caso de quere usar docker en el agente
+                sh 'docker ps'
+            }
+        }
+    }
+}
+
+3.- Configurar el nodo agente jenkins-ssh-agent
+-En el host (esta maquina) y en esta misma ubicacion, abrir una terminal (powershell en mi caso) y generar el par de claves ssh publico-privada.
+    ejecutar (powershell en mi caso):
+        ssh-keygen -t rsa -b 2048 -f jenkins_agent_key
+        ssh-keygen -t rsa -b 4096 -f jenkins_agent_key -m PEM
+    Esto creará dos archivos: jenkins_agent_key (clave privada) y jenkins_agent_key.pub (clave pública).
+
+-Generar llave ssh en el contenedor de jenkins
+    docker exec -it jenkins bash
+    ssh-keygen -t rsa -b 2048 -C "jenkins@docker" -f /var/jenkins_home/.ssh/id_rsa -N ""
+    ssh-keygen -t rsa -b 2048 -C "root@jenkins-ssh-agent" -f /root/.ssh/id_rsa -N ""
+
+    cp /root/.ssh/id_rsa id_rsa
+    cp /root/.ssh/id_rsa.pub id_rsa.pub
+
+conectar:
+    ssh -i /var/jenkins_home/.ssh/id_rsa user@ssh-agent
+    ssh -i /root/.ssh/id_rsa root@jenkins-ssh-agent
+
+-Editar DockerfileSShAgent para copiar la clave pública al contenedor y configurar el servidor SSH.

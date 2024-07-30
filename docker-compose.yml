@@ -1,0 +1,120 @@
+
+services:
+  jenkins:
+    # image: jenkins/jenkins:lts
+    build:
+      context: .
+      dockerfile: DockerfileJenkins
+    privileged: true
+    user: root
+    ports:
+      - 8081:8080
+      - 50000:50000
+    container_name: jenkins
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-network
+
+  jenkins-ssh-agent:
+    # image: jenkins/ssh-agent:latest
+    build:
+      context: .
+      dockerfile: DockerfileSShAgent
+    container_name: jenkins-ssh-agent
+    privileged: true
+    user: root
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /agent_home:/home/jenkins/agent:rw  
+    depends_on:
+      - jenkins
+    networks:
+      - jenkins-network
+
+
+  jenkins-inbound-agent:
+    # image: jenkins/inbound-agent:latest
+    build:
+      context: .
+      dockerfile: DockerfileInboundAgent
+    container_name: jenkins-inbound-agent
+    environment:
+      - JENKINS_URL=${AGENT_INBOUND_URL}
+      - JENKINS_AGENT_NAME=${AGENT_INBOUND_NAME}
+      - JENKINS_SECRET=${AGENT_INBOUND_SECRET}
+    depends_on:
+      - jenkins
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  
+    networks:
+      - jenkins-network
+
+  sonarqube:
+    image: sonarqube:9.9.6-community
+    expose:
+      - 9000
+    ports:
+      - 9000:9000
+    container_name: sonarqube
+    environment:
+      - SONARQUBE_JDBC_URL=jdbc:postgresql://db:5432/sonar
+      - SONARQUBE_JDBC_USERNAME=sonar
+      - SONARQUBE_JDBC_PASSWORD=sonar
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - ./sonarqube_conff:/opt/sonarqube/conf
+      - ./sonarqube_data:/opt/sonarqube/data
+      - ./sonarqube_extensions:/opt/sonarqube/extensions
+      - ./sonarqube_logs:/opt/sonarqube/logs
+      - ./sonarqube_bundled-pluginss:/opt/sonarqube/lib/bundled-plugins
+    networks:
+      - jenkins-network
+
+  db:
+    image: postgres:16
+    container_name: postgres_jenkins_sonarqube
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+    volumes:
+      - ./postgresqll:/var/lib/postgresql
+      - ./postgresql_data:/var/lib/postgresql/data
+    ports:
+      - 5437:5432
+    networks:
+      - jenkins-network
+
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: nexus
+    ports:
+      - "8082:8081"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - nexus-data:/nexus-data
+    environment:
+      - NEXUS_CONTEXT=/
+    networks:
+      - jenkins-network
+
+volumes:
+  jenkins_home: {}
+  sonarqube_conff: {}
+  sonarqube_data: {}
+  sonarqube_extensions: {}
+  sonarqube_logs: {}
+  sonarqube_bundled-pluginss: {}
+  postgresql_data: {}
+  postgresqll: {}
+  nexus-data: {}
+
+networks:
+  jenkins-network:
+    driver: bridge

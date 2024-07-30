@@ -1,0 +1,65 @@
+  ################ jenkins/inbound-agent #############################
+  # Modo de conexión: Se conecta a Jenkins usando el protocolo JNLP (Java Network Launch Protocol).
+  # Autenticación: Utiliza un secreto generado por Jenkins (JENKINS_SECRET) para autenticarse. Este secreto se obtiene al configurar el nodo agente en Jenkins.
+  # Configuración: Es más sencillo de configurar ya que solo necesitas el URL de Jenkins y el secreto del agente.
+  # Uso típico: Se usa cuando no se desea configurar claves SSH o cuando se prefiere la autenticación basada en tokens proporcionados por Jenkins.
+
+  ################ jenkins/ssh-agent #############################
+  # Modo de conexión: Se conecta a Jenkins usando el protocolo SSH.
+  # Autenticación: Utiliza claves SSH para la autenticación. Necesitas configurar una clave SSH pública (JENKINS_AGENT_SSH_PUBKEY) en el contenedor del agente y la clave privada correspondiente en Jenkins.
+  # Configuración: Requiere más configuración ya que debes gestionar las claves SSH. La clave pública se agrega al contenedor del agente, y la clave privada se debe configurar en Jenkins.
+  # Uso típico: Se usa cuando se requiere una mayor seguridad en la autenticación o cuando el entorno ya está configurado para usar SSH para la gestión de nodos.
+ 
+
+
+
+Consideraciones de los agentes.
+    Facilidad de uso: El jenkins/inbound-agent es más fácil de configurar y es ideal para entornos donde se quiere una configuración rápida y sencilla.
+    Seguridad: El jenkins/ssh-agent ofrece una autenticación más segura usando claves SSH, pero requiere una configuración adicional y la gestión de claves SSH.
+
+Ejemplo de uso de jenkins/ssh-agent:
+Si decides usar el jenkins/ssh-agent, asegúrate de generar una clave SSH y agregar la clave pública en el contenedor y la clave privada en Jenkins. Aquí hay un ejemplo paso a paso:
+
+Generar claves SSH:
+
+sh
+````
+ssh-keygen -t rsa -b 4096 -C "jenkins-agent"
+````
+Esto generará una clave pública (~/.ssh/id_rsa.pub) y una clave privada (~/.ssh/id_rsa).
+
+Configurar el contenedor del agente:
+
+    Reemplaza <tu_clave_ssh_publica> con el contenido de ~/.ssh/id_rsa.pub.
+
+Agregar la clave privada en Jenkins:
+
+    Ve a "Manage Jenkins" -> "Manage Nodes and Clouds" -> "New Node".
+    Configura un nuevo nodo y usa la clave privada (~/.ssh/id_rsa) para la autenticación SSH.
+
+
+
+Ejemplo de uso de jenkins/inbound-agent y jenkins/ssh-agent:
+
+1.-Obtener el secreto del agente jenkins/inbound-agent:
+
+_Configura el nodo inbound-agent en Jenkins y copia el secreto.
+_Reemplaza {{your_jenkins_inbound_agent_secret}} con el secreto en el archivo docker-compose.yml.
+
+2._Generar y configurar la clave SSH para el agente jenkins/ssh-agent:
+
+_Genera una clave SSH y agrega la clave pública en el contenedor del agente.
+_Reemplaza ssh-rsa AAAAB3Nza... con tu clave pública.
+
+3.-Configurar Jenkins:
+
+_Configura ambos agentes (inbound-agent y ssh-agent) en Jenkins.
+_Para el ssh-agent, asegúrate de agregar la clave privada en Jenkins para la autenticación SSH.
+
+4._Levantar los servicios:
+
+_Ejecuta docker-compose up -d.
+
+Beneficios:
+    Flexibilidad: Usar ambos tipos de agentes te permite tener mayor flexibilidad y redundancia en tu entorno Jenkins.
+    Escalabilidad: Puedes escalar y distribuir mejor las cargas de trabajo según las necesidades de cada tipo de agente.

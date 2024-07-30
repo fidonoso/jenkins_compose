@@ -1,0 +1,49 @@
+FROM jenkins/ssh-agent:latest
+
+# Instalar Docker
+USER root
+# Instalar Docker CLI
+RUN apt-get update && \
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli
+
+# Instalar Docker Compose
+RUN curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && \
+    chmod +x /usr/local/bin/docker-compose
+
+# Añadir la clave pública
+USER jenkins
+RUN mkdir -p /home/jenkins/.ssh && \
+    chmod 700 /home/jenkins/.ssh
+ARG JENKINS_AGENT_SSH_PUBKEY
+RUN echo "${JENKINS_AGENT_SSH_PUBKEY}" > /home/jenkins/.ssh/authorized_keys && \
+    chmod 700 /home/jenkins/.ssh/authorized_keys && \
+    chown -R jenkins:jenkins /home/jenkins/.ssh
+
+
+# Instala Java 22
+# RUN apt-get update && \
+#     apt-get install -y openjdk-22-jdk && \
+#     apt-get clean
+
+# Instala Node.js
+# RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+#     apt-get install -y nodejs && \
+#     apt-get clean
+
+# Instala PHP
+# RUN apt-get update && \
+#     apt-get install -y php && \
+#     apt-get clean
+
+# comando ping
+USER root
+RUN apt-get install inetutils-ping -y
+
+# Configura otros entornos y dependencias según sea necesario
+# Agrega la clave SSH pública
+# ARG JENKINS_AGENT_SSH_PUBKEY
+# RUN echo "${JENKINS_AGENT_SSH_PUBKEY}" > /home/jenkins/.ssh/authorized_keys

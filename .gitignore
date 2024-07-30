@@ -1,0 +1,9 @@
+/jenkins_home
+/postgresql_data
+/postgresqll
+/sonarqube_bundled-pluginss
+/sonarqube_conff
+/sonarqube_data
+/sonarqube_extensions
+/sonarqube_logs
+.env

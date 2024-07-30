@@ -1,0 +1,48 @@
+FROM jenkins/inbound-agent:latest
+
+# Instala Node.js
+# RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+#     apt-get install -y nodejs && \
+#     apt-get clean
+
+# Instala PHP
+# RUN apt-get update && \
+#     apt-get install -y php && \
+#     apt-get clean
+
+# Configura otros entornos y dependencias según sea necesario
+# Instalar Java 22
+USER root
+
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget https://download.java.net/java/GA/jdk22/830ec9fcccef480bb3e73fb7ecafe059/36/GPL/openjdk-22_linux-x64_bin.tar.gz && \
+    tar -xvf openjdk-22_linux-x64_bin.tar.gz && \
+    mv jdk-22 /opt/jdk-22 && \
+    update-alternatives --install /usr/bin/java java /opt/jdk-22/bin/java 2200 && \
+    update-alternatives --set java /opt/jdk-22/bin/java && \
+    rm openjdk-22_linux-x64_bin.tar.gz
+#comando para usar diferentes versiones de java desde dentro del contenedor
+# update-alternatives --list java       
+# update-alternatives --config java
+
+
+# si no quiero configurar las variables de entorno en el pipeline para java 22 puedo setearlas aca
+# ENV JAVA_HOME=/opt/jdk-22
+# ENV PATH=$JAVA_HOME/bin:$PATH
+
+#instlar comando ping para probar conexion con otros contendores
+RUN apt-get install inetutils-ping
+
+# Instalación de Maven
+RUN apt-get update && \
+    apt-get install -y maven && \
+    rm -rf /var/lib/apt/lists/*
+
+# Instalar Docker CLI
+RUN apt-get update && \
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli
